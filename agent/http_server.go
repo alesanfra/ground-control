@@ -16,14 +16,15 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package main
+package agent
 
 import (
 	"log"
 	"net/http"
 )
 
-func httpServer() {
+// StartHTTPServer starts http server
+func StartHTTPServer() {
 	log.Println("Start HTTP")
 	http.HandleFunc("/device", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

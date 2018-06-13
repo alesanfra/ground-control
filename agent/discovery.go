@@ -16,7 +16,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package main
+package agent
 
 import (
 	"bytes"
@@ -29,7 +29,8 @@ import (
 
 const discoveryInterval = 30 * time.Second
 
-func agent(network string) {
+// StartAgent starts the agent
+func StartAgent(network string) {
 	for {
 		go networkDiscovery(network)
 		<-time.After(discoveryInterval)

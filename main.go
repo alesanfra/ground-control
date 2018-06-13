@@ -22,18 +22,16 @@ import (
 	"fmt"
 	"log"
 	"os"
-)
 
-var devices DeviceList
+	"github.com/alesanfra/ground-control/agent"
+)
 
 func main() {
 	network := os.Args[1]
 	log.Printf("Start Network Discovery on %s\n", network)
 
-	devices.Init()
-
-	go agent(network)
-	go httpServer()
+	go agent.StartAgent(network)
+	go agent.StartHTTPServer()
 
 	var input string
 	fmt.Scanln(&input)
