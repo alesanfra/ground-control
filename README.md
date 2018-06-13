@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/alesanfra/ground-control.svg?branch=master)](https://travis-ci.org/alesanfra/ground-control)
 # Ground Control
 Automated network scanner written in go
 
