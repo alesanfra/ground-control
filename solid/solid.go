@@ -16,23 +16,42 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package agent
+package solid
 
 import (
-	"log"
-	"net/http"
+	"encoding/json"
+	"io/ioutil"
 )
 
-// StartHTTPServer starts http server
-func StartHTTPServer() {
-	log.Println("Start HTTP")
-	http.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(devices.AsJSON())
-	})
+// Cache yet another dbms
+type Cache struct {
+	name     string
+	data     map[string]string
+	metadata map[string]string
+}
 
-	// fs := http.FileServer(http.Dir("static/"))
-	// http.Handle("/static/", http.StripPrefix("/static/", fs))
+// MakeSolidCache constructor
+func MakeSolidCache(name string) Cache {
+	c := Cache{name: name}
+	c.data = make(map[string]string)
+	c.metadata = make(map[string]string)
+	return c
+}
 
-	http.ListenAndServe(":3000", nil)
+// Put tbd
+func (c *Cache) Put(key string, value interface{}) {
+	marshaledValue, _ := json.Marshal(value)
+	c.data[key] = string(marshaledValue)
+	c.store()
+}
+
+// Get tbd
+func (c *Cache) Get(key string, value interface{}) {
+	v := c.data[key]
+	json.Unmarshal([]byte(v), &value)
+}
+
+func (c Cache) store() {
+	marshaledValue, _ := json.Marshal(c)
+	ioutil.WriteFile(c.name+".solid", marshaledValue, 0644)
 }

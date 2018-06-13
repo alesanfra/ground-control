@@ -1,6 +1,6 @@
 /*
    Ground Control: free and automated network scanner
-   Copyright (C) <2018>  <Alessio Sanfratello>
+   Copyright (C) 2018  Alessio Sanfratello
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,8 +24,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/alesanfra/ground-control/cache"
-
+	"github.com/alesanfra/ground-control/solid"
 	nmap "github.com/lair-framework/go-nmap"
 )
 
@@ -33,7 +32,7 @@ const discoveryInterval = 30 * time.Second
 
 // StartAgent starts the agent
 func StartAgent(network string) {
-	db := cache.MakeSolidCache("db")
+	db := solid.MakeSolidCache("db")
 	endDiscovery := make(chan string, 1)
 	go triggerCascadingDiscoveries(endDiscovery)
 	for {
@@ -42,7 +41,7 @@ func StartAgent(network string) {
 	}
 }
 
-func networkDiscovery(network string, db cache.SolidCache, endDiscovery chan<- string) {
+func networkDiscovery(network string, db solid.Cache, endDiscovery chan<- string) {
 	log.Print("Discovery Start")
 
 	binary, lookErr := exec.LookPath("/usr/local/bin/nmap")
