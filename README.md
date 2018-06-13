@@ -8,6 +8,14 @@ go build
 ```
 
 ## Run
+Example on macOS
 ```
-./ground-control 192.168.1.0/24
+sudo ./ground-control 192.168.1.0/24
+```
+
+
+## Get data
+Simple REST API
+```
+http://localhost:3000/devices 
 ```
