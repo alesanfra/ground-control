@@ -34,13 +34,15 @@ const discoveryInterval = 30 * time.Second
 // StartAgent starts the agent
 func StartAgent(network string) {
 	db := cache.MakeSolidCache("db")
+	endDiscovery := make(chan string, 1)
+	go triggerCascadingDiscoveries(endDiscovery)
 	for {
-		go networkDiscovery(network, db)
+		go networkDiscovery(network, db, endDiscovery)
 		<-time.After(discoveryInterval)
 	}
 }
 
-func networkDiscovery(network string, db cache.SolidCache) {
+func networkDiscovery(network string, db cache.SolidCache, endDiscovery chan<- string) {
 	log.Print("Discovery Start")
 
 	binary, lookErr := exec.LookPath("/usr/local/bin/nmap")
@@ -60,9 +62,17 @@ func networkDiscovery(network string, db cache.SolidCache) {
 	run, _ := nmap.Parse(out.Bytes())
 	devices.UpdateWithDiscoveryResult(run.Hosts)
 	go db.Put("roba", devices.hosts)
+	endDiscovery <- "end"
 
 	for _, host := range devices.hosts {
 		log.Printf("%s: %s\n", host.Addresses[0].Addr, host.Status.State)
 	}
 	log.Print("Discovery End")
+}
+
+func triggerCascadingDiscoveries(endDiscovery <-chan string) {
+	for {
+		<-endDiscovery
+		log.Print("End discovery trigger")
+	}
 }
