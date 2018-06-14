@@ -42,12 +42,12 @@ func StartAgent(network string) {
 func networkDiscovery(network string, db solid.Cache, endDiscovery chan<- string) {
 	log.Print("Discovery Start")
 
-	binary, lookErr := exec.LookPath("/usr/local/bin/nmap")
+	binary, lookErr := exec.LookPath("nmap")
 	if lookErr != nil {
 		panic(lookErr)
 	}
 
-	cmd := exec.Command(binary, "nmap", "-sn", "-oX", "-", network)
+	cmd := exec.Command(binary, "-sn", "-oX", "-", network)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
