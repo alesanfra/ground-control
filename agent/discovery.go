@@ -17,7 +17,6 @@
 package agent
 
 import (
-	"bytes"
 	"log"
 	"os/exec"
 	"time"
@@ -42,29 +41,26 @@ func StartAgent(network string) {
 func networkDiscovery(network string, db solid.Cache, endDiscovery chan<- string) {
 	log.Print("Discovery Start")
 
-	binary, lookErr := exec.LookPath("nmap")
-	if lookErr != nil {
-		panic(lookErr)
+	binary, err := exec.LookPath("nmap")
+	if err != nil {
+		panic(err)
 	}
 
-	cmd := exec.Command(binary, "-sn", "-oX", "-", network)
+	out, _ := exec.Command(binary, "-sn", "-oX", "-", network).Output()
+	run, _ := nmap.Parse(out)
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	run, _ := nmap.Parse(out.Bytes())
 	devices.UpdateWithDiscoveryResult(run.Hosts)
 	go db.Put("roba", devices.hosts)
 	endDiscovery <- "end"
+	printResults()
 
+	log.Print("Discovery End")
+}
+
+func printResults() {
 	for _, host := range devices.hosts {
 		log.Printf("%s: %s\n", host.Addresses[0].Addr, host.Status.State)
 	}
-	log.Print("Discovery End")
 }
 
 func triggerCascadingDiscoveries(endDiscovery <-chan string) {
