@@ -30,10 +30,11 @@ type Cache struct {
 
 // MakeSolidCache constructor
 func MakeSolidCache(name string) Cache {
-	c := Cache{name: name}
-	c.data = make(map[string]string)
-	c.metadata = make(map[string]string)
-	return c
+	return Cache{
+		name:     name,
+		data:     make(map[string]string),
+		metadata: make(map[string]string),
+	}
 }
 
 // Put tbd

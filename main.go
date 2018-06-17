@@ -17,9 +17,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/alesanfra/ground-control/agent"
 )
@@ -31,6 +32,8 @@ func main() {
 	go agent.StartAgent(network)
 	go agent.StartHTTPServer()
 
-	var input string
-	fmt.Scanln(&input)
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	<-c
+	log.Print("Shutdown")
 }
