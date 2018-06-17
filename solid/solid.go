@@ -23,34 +23,34 @@ import (
 
 // Cache yet another dbms
 type Cache struct {
-	name     string
-	data     map[string]string
-	metadata map[string]string
+	Name     string            `json:"name"`
+	Data     map[string]string `json:"data"`
+	Metadata map[string]string `json:"metadata"`
 }
 
 // MakeSolidCache constructor
 func MakeSolidCache(name string) Cache {
 	return Cache{
-		name:     name,
-		data:     make(map[string]string),
-		metadata: make(map[string]string),
+		Name:     name,
+		Data:     make(map[string]string),
+		Metadata: make(map[string]string),
 	}
 }
 
 // Put tbd
 func (c *Cache) Put(key string, value interface{}) {
 	marshaledValue, _ := json.Marshal(value)
-	c.data[key] = string(marshaledValue)
+	c.Data[key] = string(marshaledValue)
 	c.store()
 }
 
 // Get tbd
 func (c *Cache) Get(key string, value interface{}) {
-	v := c.data[key]
+	v := c.Data[key]
 	json.Unmarshal([]byte(v), &value)
 }
 
 func (c Cache) store() {
 	marshaledValue, _ := json.Marshal(c)
-	ioutil.WriteFile(c.name+".solid", marshaledValue, 0644)
+	ioutil.WriteFile(c.Name+".solid", marshaledValue, 0644)
 }
