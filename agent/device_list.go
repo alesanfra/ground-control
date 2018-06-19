@@ -30,9 +30,11 @@ type DeviceList struct {
 	mutex sync.RWMutex
 }
 
-// Init default constructor
-func (d *DeviceList) Init() {
-	d.hosts = make(map[string]*nmap.Host)
+// NewDeviceList constructor
+func NewDeviceList() *DeviceList {
+	return &DeviceList{
+		hosts: make(map[string]*nmap.Host),
+	}
 }
 
 // AsJSON returns device list as json buffer

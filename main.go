@@ -30,7 +30,6 @@ func main() {
 	log.Printf("Start Network Discovery on %s\n", network)
 
 	go agent.StartAgent(network)
-	go agent.StartHTTPServer()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)

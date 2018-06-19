@@ -22,7 +22,7 @@ import (
 )
 
 // StartHTTPServer starts http server
-func StartHTTPServer() {
+func StartHTTPServer(devices *DeviceList) {
 	log.Println("Start HTTP")
 	http.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

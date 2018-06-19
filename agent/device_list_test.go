@@ -9,8 +9,7 @@ import (
 
 func TestAsJSON(t *testing.T) {
 	Convey("Given a device list", t, func() {
-		var testDevices DeviceList
-		testDevices.Init()
+		testDevices := NewDeviceList()
 
 		Convey("When the list is empty", func() {
 			j := string(testDevices.AsJSON())

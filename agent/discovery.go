@@ -21,7 +21,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/alesanfra/ground-control/solid"
 	nmap "github.com/lair-framework/go-nmap"
 )
 
@@ -29,15 +28,17 @@ const discoveryInterval = 30 * time.Second
 
 // StartAgent starts the agent
 func StartAgent(network string) {
-	db := solid.MakeSolidCache("db")
+	devices := NewDeviceList()
+
+	go StartHTTPServer(devices)
 
 	for {
-		go networkDiscovery(network, db)
+		go networkDiscovery(network, devices)
 		<-time.After(discoveryInterval)
 	}
 }
 
-func networkDiscovery(network string, db solid.Cache) {
+func networkDiscovery(network string, devices *DeviceList) {
 	log.Print("Discovery Start")
 
 	binary, err := exec.LookPath("nmap")
@@ -49,13 +50,12 @@ func networkDiscovery(network string, db solid.Cache) {
 	run, _ := nmap.Parse(out)
 
 	devices.UpdateWithDiscoveryResult(run.Hosts)
-	go db.Put("results", devices.hosts)
-	printResults()
+	logResults(devices)
 
 	log.Print("Discovery End")
 }
 
-func printResults() {
+func logResults(devices *DeviceList) {
 	for _, host := range devices.hosts {
 		log.Printf("%s: %s\n", host.Addresses[0].Addr, host.Status.State)
 	}
