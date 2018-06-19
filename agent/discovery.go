@@ -34,6 +34,7 @@ func StartAgent(network string) {
 
 	for {
 		go networkDiscovery(network, devices)
+		go networkDiscoveryIPv6(devices)
 		<-time.After(discoveryInterval)
 	}
 }
@@ -53,6 +54,26 @@ func networkDiscovery(network string, devices *DeviceList) {
 	logResults(devices)
 
 	log.Print("Discovery End")
+}
+
+func networkDiscoveryIPv6(devices *DeviceList) {
+	log.Print("Discovery Start")
+
+	binary, err := exec.LookPath("nmap")
+	if err != nil {
+		panic(err)
+	}
+
+	out, _ := exec.Command(binary, "-6", "-oX", "-", "--script=targets-ipv6-multicast-echo.nse", "--script-args", "'newtargets'", "-sL").Output()
+	run, _ := nmap.Parse(out)
+
+	// devices.UpdateWithDiscoveryResult(run.Hosts)
+	// logResults(devices)
+	log.Print(run.Hosts)
+
+	log.Print("Discovery End")
+
+	//
 }
 
 func logResults(devices *DeviceList) {
