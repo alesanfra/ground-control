@@ -40,7 +40,7 @@ func StartAgent(network string) {
 }
 
 func networkDiscovery(network string, devices *DeviceList) {
-	log.Print("Discovery Start")
+	log.Print("Discovery IPv4 Start")
 
 	binary, err := exec.LookPath("nmap")
 	if err != nil {
@@ -53,27 +53,23 @@ func networkDiscovery(network string, devices *DeviceList) {
 	devices.UpdateWithDiscoveryResult(run.Hosts)
 	logResults(devices)
 
-	log.Print("Discovery End")
+	log.Print("Discovery IPv4 End")
 }
 
 func networkDiscoveryIPv6(devices *DeviceList) {
-	log.Print("Discovery Start")
+	log.Print("Discovery IPv6 Start")
 
 	binary, err := exec.LookPath("nmap")
 	if err != nil {
 		panic(err)
 	}
 
-	out, _ := exec.Command(binary, "-6", "-oX", "-", "--script=targets-ipv6-multicast-echo.nse", "--script-args", "'newtargets'", "-sL").Output()
+	out, _ := exec.Command(binary, "-6", "-sn", "-oX", "-", "--script=targets-ipv6-multicast-echo.nse", "--script-args", "'newtargets'").Output()
 	run, _ := nmap.Parse(out)
 
-	// devices.UpdateWithDiscoveryResult(run.Hosts)
-	// logResults(devices)
-	log.Print(run.Hosts)
-
-	log.Print("Discovery End")
-
-	//
+	devices.UpdateWithDiscoveryResult(run.Hosts)
+	logResults(devices)
+	log.Print("Discovery IPv6 End")
 }
 
 func logResults(devices *DeviceList) {
