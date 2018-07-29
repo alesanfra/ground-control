@@ -21,16 +21,18 @@ import (
 	"net/http"
 )
 
-// StartHTTPServer starts http server
-func StartHTTPServer(devices *DeviceList) {
+// WebServer rest api for the agent
+type WebServer struct {
+	devices *DeviceList
+}
+
+// Start starts http server
+func (ws *WebServer) Start() {
 	log.Println("Start HTTP")
 	http.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(devices.AsJSON())
+		w.Write(ws.devices.AsJSON())
 	})
-
-	// fs := http.FileServer(http.Dir("static/"))
-	// http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	http.ListenAndServe(":3000", nil)
 }
