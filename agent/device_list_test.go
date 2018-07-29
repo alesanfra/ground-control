@@ -21,7 +21,8 @@ func TestAsJSON(t *testing.T) {
 
 		Convey("When the list contains devices", func() {
 			testDevices.UpdateWithDiscoveryResult([]nmap.Host{
-				{Comment: "test comment", Addresses: []nmap.Address{{Addr: "test_mac", AddrType: "mac"}}}})
+				{Comment: "test comment", Addresses: []nmap.Address{{Addr: "test_mac", AddrType: "mac"}}}},
+				[]nmap.Host{})
 			j := string(testDevices.AsJSON())
 
 			Convey("The resulting json should contain devices as well", func() {

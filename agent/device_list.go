@@ -51,7 +51,7 @@ func (d *DeviceList) AsJSON() []byte {
 }
 
 // UpdateWithDiscoveryResult add discovery result
-func (d *DeviceList) UpdateWithDiscoveryResult(hosts []nmap.Host) {
+func (d *DeviceList) UpdateWithDiscoveryResult(ipv4Hosts []nmap.Host, ipv6Hosts []nmap.Host) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -61,10 +61,15 @@ func (d *DeviceList) UpdateWithDiscoveryResult(hosts []nmap.Host) {
 	}
 
 	// update device list with discovered hosts
+	d.addDiscoveredDevices(ipv4Hosts)
+	d.addDiscoveredDevices(ipv6Hosts)
+}
+
+func (d *DeviceList) addDiscoveredDevices(hosts []nmap.Host) {
 	for i, host := range hosts {
-		for _, address := range host.Addresses {
+		for j, address := range host.Addresses {
 			if address.AddrType == "mac" {
-				d.hosts[address.Addr] = &hosts[i]
+				d.hosts[hosts[i].Addresses[j].Addr] = &hosts[i]
 				continue
 			}
 		}
