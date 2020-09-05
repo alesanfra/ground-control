@@ -17,6 +17,7 @@
 package agent
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -24,15 +25,18 @@ import (
 // WebServer rest api for the agent
 type WebServer struct {
 	devices *DeviceList
+	port    uint
 }
 
 // Start starts http server
 func (ws *WebServer) Start() {
-	log.Println("Start HTTP")
 	http.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(ws.devices.AsJSON())
 	})
 
-	http.ListenAndServe(":3000", nil)
+	endpoint := fmt.Sprintf(":%d", ws.port)
+	log.Printf("Start HTTP on %s\n", endpoint)
+	http.ListenAndServe(endpoint, nil)
+
 }
