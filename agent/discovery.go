@@ -30,7 +30,7 @@ type DiscoveryManager struct {
 	devices  *DeviceList
 }
 
-func (d *DiscoveryManager) runDiscovery() {
+func (d *DiscoveryManager) runDiscovery() []nmap.Host {
 	ipv4Result := make(chan []nmap.Host, 1)
 	ipv6Result := make(chan []nmap.Host, 1)
 	go runDiscoveryIPv4(d.network, ipv4Result)
@@ -39,6 +39,13 @@ func (d *DiscoveryManager) runDiscovery() {
 	ipv6Hosts := <-ipv6Result
 	d.devices.UpdateWithDiscoveryResult(ipv4Hosts, ipv6Hosts)
 	d.logResults()
+
+	ret := make([]nmap.Host, 0, len(d.devices.hosts))
+
+	for _, value := range d.devices.hosts {
+		ret = append(ret, *value)
+	}
+	return ret
 }
 
 func runDiscoveryIPv4(network string, result chan []nmap.Host) {
