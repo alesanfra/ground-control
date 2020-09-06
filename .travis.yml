@@ -2,12 +2,6 @@ language: go
 go:
   - "1.15"
 
-dist: bionic
-addons:
-  apt:
-    packages:
-    - nmap
-
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic ./... -v
 
