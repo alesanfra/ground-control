@@ -13,6 +13,7 @@ Example on macOS
 ```
 sudo ./ground-control -n 192.168.1.0/24
 ```
+sudo is required in order to access ARP table
 
 
 ## Get data
