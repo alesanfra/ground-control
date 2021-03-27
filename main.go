@@ -24,9 +24,12 @@ import (
 	"syscall"
 
 	"github.com/alesanfra/ground-control/agent"
+	"github.com/alesanfra/ground-control/connectivity"
 )
 
 func main() {
+	connectivity.Ping()
+
 	network := flag.String("n", "", "Network to be scanned in the form 192.168.1.0/24")
 	port := flag.Uint("p", 3000, "HTTP port")
 	flag.Parse()
@@ -43,4 +46,5 @@ func main() {
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	<-c
 	log.Print("Shutdown")
+
 }
