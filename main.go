@@ -1,18 +1,22 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"github.com/alesanfra/ground-control/scanner"
+	"github.com/m-lab/ndt7-client-go"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/alesanfra/ground-control/agent"
-	"github.com/alesanfra/ground-control/connectivity"
 )
 
 func main() {
-	connectivity.Ping()
+	client := ndt7.NewClient("ndt7-client-go-example", "0.1.0")
+
+	scanner.SpeedTest(context.Background(), client)
 
 	network := flag.String("n", "", "Network to be scanned in the form 192.168.1.0/24")
 	port := flag.Uint("p", 3000, "HTTP port")
