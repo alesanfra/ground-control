@@ -3,36 +3,66 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/alesanfra/ground-control/scanner"
-	"github.com/m-lab/ndt7-client-go"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/alesanfra/ground-control/agent"
+	"github.com/alesanfra/ground-control/scanner"
+	"github.com/alesanfra/ground-control/web"
+	"github.com/m-lab/ndt7-client-go"
 )
 
+const ClientName = "ground-control"
+const Version = "2"
+
 func main() {
-	client := ndt7.NewClient("ndt7-client-go-example", "0.1.0")
-
-	scanner.SpeedTest(context.Background(), client)
-
-	network := flag.String("n", "", "Network to be scanned in the form 192.168.1.0/24")
 	port := flag.Uint("p", 3000, "HTTP port")
 	flag.Parse()
 
-	if len(*network) == 0 {
-		log.Fatal("You must specify the network")
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	log.Printf("Start Network Discovery on %s\n", *network)
+	devices := scanner.NewDeviceMap()
 
-	go agent.StartAgent(*network, *port)
+	// start web server
+	go web.NewWebServer(devices, *port).Start()
+	go startArpScanner(ctx, devices)
+
+	_ = ndt7.NewClient(ClientName, Version)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 	<-c
 	log.Print("Shutdown")
 
+}
+
+// StartAgent starts the agent
+func startArpScanner(ctx context.Context, devices scanner.DeviceMap) {
+	vendor := scanner.NewVendorFinder()
+
+	// Get a list of all interfaces.
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		panic(err)
+	}
+
+	result := make(chan scanner.Device)
+
+	for _, iface := range ifaces {
+		// Start up a scan on each interface.
+		go func(iface net.Interface) {
+			if err := scanner.ArpScan(&iface, 10*time.Second, vendor, result, ctx); err != nil {
+				log.Printf("interface %v: %v", iface.Name, err)
+			}
+		}(iface)
+	}
+
+	for device := range result {
+		log.Printf("IP %v is at %v (%s)", device.Ip, device.Mac, device.Vendor)
+		devices[device.Mac.String()] = device
+	}
 }

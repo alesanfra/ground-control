@@ -1,6 +1,6 @@
 module github.com/alesanfra/ground-control
 
-go 1.12
+go 1.15
 
 require (
 	github.com/gofiber/fiber/v2 v2.7.1

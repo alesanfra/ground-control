@@ -7,71 +7,21 @@ import (
 	"errors"
 	"log"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"github.com/umahmood/macvendors"
 )
 
-var vendorCache = make(map[string]string)
-
-func main() {
-	// Get a list of all interfaces.
-	ifaces, err := net.Interfaces()
+// ArpScan scans an individual interface's local network for machines using ARP requests/replies.
+// scan loops forever, sending packets out regularly.
+func ArpScan(iface *net.Interface, interval time.Duration, vendor *VendorFinder, result chan<- Device, ctx context.Context) error {
+	addr, err := getIpAddress(iface)
 	if err != nil {
-		panic(err)
-	}
-
-	var wg sync.WaitGroup
-	for _, iface := range ifaces {
-		wg.Add(1)
-		// Start up a scan on each interface.
-		go func(iface net.Interface) {
-			defer wg.Done()
-			if err := scan(&iface); err != nil {
-				log.Printf("interface %v: %v", iface.Name, err)
-			}
-		}(iface)
-	}
-	// Wait for all interfaces' scans to complete.  They'll try to run
-	// forever, but will stop on an error, so if we get past this Wait
-	// it means all attempts to write have failed.
-	wg.Wait()
-}
-
-// scan scans an individual interface's local network for machines using ARP requests/replies.
-//
-// scan loops forever, sending packets out regularly.  It returns an error if
-// it's ever unable to write a packet.
-func scan(iface *net.Interface) error {
-	// We just look for IPv4 addresses, so try to find if the interface has one.
-	var addr *net.IPNet
-	if addrs, err := iface.Addrs(); err != nil {
 		return err
-	} else {
-		for _, a := range addrs {
-			if ipnet, ok := a.(*net.IPNet); ok {
-				if ip4 := ipnet.IP.To4(); ip4 != nil {
-					addr = &net.IPNet{
-						IP:   ip4,
-						Mask: ipnet.Mask[len(ipnet.Mask)-4:],
-					}
-					break
-				}
-			}
-		}
 	}
-	// Sanity-check that the interface has a good address.
-	if addr == nil {
-		return errors.New("no good IP network found")
-	} else if addr.IP[0] == 127 {
-		return errors.New("skipping localhost")
-	} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
-		return errors.New("mask means network is too large")
-	}
+
 	log.Printf("Using network range %v for interface %v", addr, iface.Name)
 
 	// Open up a pcap handle for packet reads/writes.
@@ -82,30 +32,61 @@ func scan(iface *net.Interface) error {
 	defer handle.Close()
 
 	// Start up a goroutine to read in packet data.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go ReadARP(handle, iface, ctx)
+	go readARP(handle, iface, vendor, result, ctx)
 
 	for {
-		// Write our scan packets out to the handle.
-		if err := WriteARP(handle, iface, addr); err != nil {
-			log.Printf("error writing packets on %v: %v", iface.Name, err)
-			return err
+		select {
+		case <-ctx.Done():
+			log.Println("ArpScan: context canceled")
+			return nil
+		case <-time.After(interval):
+			// Write our scan packets out to the handle.
+			if err := writeARP(handle, iface, addr); err != nil {
+				log.Printf("error writing packets on %v: %v", iface.Name, err)
+			}
 		}
-		// We don't know exactly how long it'll take for packets to be
-		// sent back to us, but 10 seconds should be more than enough
-		// time ;)
-		time.Sleep(10 * time.Second)
 	}
+}
+
+// We just look for IPv4 addresses, so try to find if the interface has one.
+func getIpAddress(iface *net.Interface) (*net.IPNet, error) {
+
+	if addresses, err := iface.Addrs(); err != nil {
+		return nil, err
+	} else {
+		for _, a := range addresses {
+			if ipnet, ok := a.(*net.IPNet); ok {
+				if ip4 := ipnet.IP.To4(); ip4 != nil {
+
+					addr := &net.IPNet{
+						IP:   ip4,
+						Mask: ipnet.Mask[len(ipnet.Mask)-4:],
+					}
+
+					// Sanity-check that the interface has a good address.
+					if addr.IP[0] == 127 {
+						return nil, errors.New("skipping localhost")
+					} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
+						return nil, errors.New("mask means network is too large")
+					}
+
+					return addr, nil
+				}
+			}
+		}
+	}
+
+	return nil, errors.New("no good IP network found")
 }
 
 // ReadARP watches a handle for incoming ARP responses we might care about, and prints them.
 //
-// ReadARP loops until 'stop' is closed.
-func ReadARP(handle *pcap.Handle, iface *net.Interface, ctx context.Context) {
+// ReadARP loops until context is closed
+func readARP(handle *pcap.Handle, iface *net.Interface, vendor *VendorFinder, result chan<- Device, ctx context.Context) {
 	src := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
 	in := src.Packets()
-	vendor := macvendors.New()
 
 	for {
 		var packet gopacket.Packet
@@ -125,30 +106,25 @@ func ReadARP(handle *pcap.Handle, iface *net.Interface, ctx context.Context) {
 			}
 
 			hwAddress := net.HardwareAddr(arp.SourceHwAddress)
-			hwAddressString := hwAddress.String()
 
-			name, ok := vendorCache[hwAddressString]
-			if !ok {
-				var err error
-				name, err = vendor.Name(hwAddressString)
-				if err != nil {
-					name = "Unknown"
-				} else {
-					vendorCache[hwAddressString] = name
-				}
+			device := Device{
+				Ip:       arp.SourceProtAddress,
+				Mac:      hwAddress,
+				Vendor:   vendor.Find(hwAddress.String()),
+				LastSeen: time.Now().UTC(),
+				Status:   Up,
 			}
-
 			// Note:  we might get some packets here that aren't responses to ones we've sent,
 			// if for example someone else sends US an ARP request.  Doesn't much matter, though...
 			// all information is good information :)
-			log.Printf("IP %v is at %v (%s)", net.IP(arp.SourceProtAddress), hwAddress, name)
+			result <- device
 		}
 	}
 }
 
 // WriteARP writes an ARP request for each address on our local network to the
 // pcap handle.
-func WriteARP(handle *pcap.Handle, iface *net.Interface, addr *net.IPNet) error {
+func writeARP(handle *pcap.Handle, iface *net.Interface, addr *net.IPNet) error {
 	// Set up all the layers' fields we can.
 	eth := layers.Ethernet{
 		SrcMAC:       iface.HardwareAddr,
@@ -193,13 +169,13 @@ func GetAllIpAddressesWithinNet(ipNetwork *net.IPNet) []net.IP {
 	broadcast := network | ^mask
 
 	// Pre-allocate result
-	out := make([]net.IP, 0, broadcast-network-2)
+	addresses := make([]net.IP, 0, broadcast-network-2)
 
 	for network++; network < broadcast; network++ {
 		var buf [4]byte
 		binary.BigEndian.PutUint32(buf[:], network)
-		out = append(out, buf[:])
+		addresses = append(addresses, buf[:])
 	}
 
-	return out
+	return addresses
 }

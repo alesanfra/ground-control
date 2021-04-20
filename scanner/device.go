@@ -21,14 +21,16 @@ type Device struct {
 	Status   DeviceStatus
 }
 
-type DeviceRegistry struct {
-	Hosts map[string]Device
-}
+type DeviceMap map[string]Device
 
-func (dr *DeviceRegistry) AsList() []Device {
-	values := make([]Device, 0, len(dr.Hosts))
-	for _, value := range dr.Hosts {
+func (dm DeviceMap) AsList() []Device {
+	values := make([]Device, 0, len(dm))
+	for _, value := range dm {
 		values = append(values, value)
 	}
 	return values
+}
+
+func NewDeviceMap() DeviceMap {
+	return make(map[string]Device)
 }

@@ -2,16 +2,21 @@ package web
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/alesanfra/ground-control/scanner"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"log"
 )
 
 // Server rest api for the agent
 type Server struct {
-	devices *scanner.DeviceRegistry
+	devices scanner.DeviceMap
 	port    uint
+}
+
+func NewWebServer(devices scanner.DeviceMap, port uint) *Server {
+	return &Server{devices: devices, port: port}
 }
 
 // Start starts http server

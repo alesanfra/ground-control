@@ -15,29 +15,31 @@ type SpeedTestResult struct {
 	Latency  float64
 }
 
-// Ping the external world
+// SpeedTest perform speed-test
 func SpeedTest(ctx context.Context, client *ndt7.Client) SpeedTestResult {
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	log.Println("NDT: start download")
-	download, err := client.StartDownload(ctx)
-	if err != nil {
+	if download, err := client.StartDownload(ctx); err != nil {
 		log.Fatal(err)
-	}
-	for range download {
+	} else {
+		for range download {
+		}
 	}
 
 	log.Println("NDT: start upload")
-	upload, err := client.StartUpload(ctx)
-	if err != nil {
+	if upload, err := client.StartUpload(ctx); err != nil {
 		log.Fatal(err)
-	}
-	for range upload {
+	} else {
+		for range upload {
+		}
 	}
 
 	results := makeSummary(client.Results())
-	log.Printf("NDT: results: %v", results)
+	log.Printf("NDT: down %f Mbit/s, up %f Mbit/s, latency %f ms",
+		results.Download, results.Upload, results.Latency)
+
 	return results
 }
 
