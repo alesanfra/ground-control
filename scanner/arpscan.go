@@ -105,12 +105,12 @@ func readARP(handle *pcap.Handle, iface *net.Interface, vendor *VendorFinder, re
 				continue
 			}
 
-			hwAddress := net.HardwareAddr(arp.SourceHwAddress)
+			hwAddress := net.HardwareAddr(arp.SourceHwAddress).String()
 
 			device := Device{
-				Ip:       arp.SourceProtAddress,
+				Ip:       net.IP(arp.SourceProtAddress).String(),
 				Mac:      hwAddress,
-				Vendor:   vendor.Find(hwAddress.String()),
+				Vendor:   vendor.Find(hwAddress),
 				LastSeen: time.Now().UTC(),
 				Status:   Up,
 			}

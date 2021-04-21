@@ -61,8 +61,10 @@ func startArpScanner(ctx context.Context, devices scanner.DeviceMap) {
 		}(iface)
 	}
 
+	go devices.SetDownAfter(10*time.Second, ctx)
+
 	for device := range result {
 		log.Printf("IP %v is at %v (%s)", device.Ip, device.Mac, device.Vendor)
-		devices[device.Mac.String()] = device
+		devices[device.Mac] = device
 	}
 }
