@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -19,8 +20,11 @@ func NewWebServer(devices scanner.DeviceMap, port uint) *Server {
 	return &Server{devices: devices, port: port}
 }
 
-// Start starts http server
-func (s *Server) Start() {
+func (s *Server) Name() string {
+	return "Web server"
+}
+
+func (s *Server) Run(ctx context.Context) error {
 	app := fiber.New()
 
 	api := app.Group("/api", logger.New())
@@ -34,4 +38,5 @@ func (s *Server) Start() {
 	})
 
 	log.Fatal(app.Listen(fmt.Sprintf(":%d", s.port)))
+	return nil
 }

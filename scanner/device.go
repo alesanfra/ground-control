@@ -52,3 +52,15 @@ func (dm DeviceMap) SetDownAfter(leniency time.Duration, ctx context.Context) {
 	}
 
 }
+
+func (dm DeviceMap) AddDevices(newDevice <-chan Device, ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case device := <-newDevice:
+			log.Printf("IP %v is at %v (%s)", device.Ip, device.Mac, device.Vendor)
+			dm[device.Mac] = device
+		}
+	}
+}

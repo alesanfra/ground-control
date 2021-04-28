@@ -7,12 +7,61 @@ import (
 	"errors"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
+
+type ArpScanService struct {
+	devices  DeviceMap
+	vendor   *VendorFinder
+	lenience time.Duration
+	interval time.Duration
+}
+
+func NewArpScanService(devices DeviceMap, lenience time.Duration, interval time.Duration) *ArpScanService {
+	return &ArpScanService{
+		devices:  devices,
+		vendor:   NewVendorFinder(),
+		lenience: lenience,
+		interval: interval,
+	}
+}
+
+func (s *ArpScanService) Name() string {
+	return "ARP scan"
+}
+
+func (s *ArpScanService) Run(ctx context.Context) error {
+	// Get a list of all interfaces.
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		panic(err)
+	}
+
+	result := make(chan Device)
+	var wg sync.WaitGroup
+
+	for _, iface := range ifaces {
+		// Start up a scan on each interface.
+		go func(iface net.Interface) {
+			wg.Add(1)
+			defer wg.Done()
+			if err := ArpScan(&iface, s.interval, s.vendor, result, ctx); err != nil {
+				log.Printf("interface %v: %v", iface.Name, err)
+			}
+		}(iface)
+	}
+
+	go s.devices.SetDownAfter(s.lenience, ctx)
+	go s.devices.AddDevices(result, ctx)
+
+	wg.Wait()
+	return err
+}
 
 // ArpScan scans an individual interface's local network for machines using ARP requests/replies.
 // scan loops forever, sending packets out regularly.
