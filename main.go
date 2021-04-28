@@ -1,46 +1,31 @@
-// Ground Control: free and automated network scanner
-// Copyright (C) 2018 Alessio Sanfratello
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"time"
 
 	"github.com/alesanfra/ground-control/agent"
+	"github.com/alesanfra/ground-control/scanner"
+	"github.com/alesanfra/ground-control/web"
 )
 
 func main() {
-	network := flag.String("n", "", "Network to be scanned in the form 192.168.1.0/24")
 	port := flag.Uint("p", 3000, "HTTP port")
 	flag.Parse()
 
-	if len(*network) == 0 {
-		log.Fatal("You must specify the network")
+	devices := scanner.NewDeviceMap()
+
+	services := []agent.Service{
+		scanner.NewArpScanService(devices, time.Minute, 10*time.Second),
+		scanner.NewSpeedTestService(time.Minute),
+		web.NewWebServer(devices, *port),
 	}
 
-	log.Printf("Start Network Discovery on %s\n", *network)
+	if err := agent.Run(context.Background(), services); err != nil {
+		log.Fatalf("Error on agent run: %v", err)
+	}
 
-	go agent.StartAgent(*network, *port)
-
-	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-	<-c
 	log.Print("Shutdown")
 }
