@@ -31,5 +31,5 @@ sudo is required in order to access ARP table
 ## Get data
 Simple REST API
 ```
-curl http://localhost:3000/devices 
+curl http://localhost:3000/api/v1/devices 
 ```

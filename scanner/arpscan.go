@@ -17,7 +17,6 @@ import (
 
 type ArpScanService struct {
 	devices  DeviceMap
-	vendor   *VendorFinder
 	lenience time.Duration
 	interval time.Duration
 }
@@ -25,7 +24,6 @@ type ArpScanService struct {
 func NewArpScanService(devices DeviceMap, lenience time.Duration, interval time.Duration) *ArpScanService {
 	return &ArpScanService{
 		devices:  devices,
-		vendor:   NewVendorFinder(),
 		lenience: lenience,
 		interval: interval,
 	}
@@ -50,7 +48,7 @@ func (s *ArpScanService) Run(ctx context.Context) error {
 		go func(iface net.Interface) {
 			wg.Add(1)
 			defer wg.Done()
-			if err := ArpScan(&iface, s.interval, s.vendor, result, ctx); err != nil {
+			if err := ArpScan(ctx, &iface, s.interval, result); err != nil {
 				log.Printf("interface %v: %v", iface.Name, err)
 			}
 		}(iface)
@@ -65,7 +63,7 @@ func (s *ArpScanService) Run(ctx context.Context) error {
 
 // ArpScan scans an individual interface's local network for machines using ARP requests/replies.
 // scan loops forever, sending packets out regularly.
-func ArpScan(iface *net.Interface, interval time.Duration, vendor *VendorFinder, result chan<- Device, ctx context.Context) error {
+func ArpScan(ctx context.Context, iface *net.Interface, interval time.Duration, result chan<- Device) error {
 	addr, err := getIpAddress(iface)
 	if err != nil {
 		return err
@@ -83,7 +81,7 @@ func ArpScan(iface *net.Interface, interval time.Duration, vendor *VendorFinder,
 	// Start up a goroutine to read in packet data.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go readARP(handle, iface, vendor, result, ctx)
+	go readARP(ctx, handle, iface, result)
 
 	for {
 		select {
@@ -133,7 +131,7 @@ func getIpAddress(iface *net.Interface) (*net.IPNet, error) {
 // ReadARP watches a handle for incoming ARP responses we might care about, and prints them.
 //
 // ReadARP loops until context is closed
-func readARP(handle *pcap.Handle, iface *net.Interface, vendor *VendorFinder, result chan<- Device, ctx context.Context) {
+func readARP(ctx context.Context, handle *pcap.Handle, iface *net.Interface, result chan<- Device) {
 	src := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
 	in := src.Packets()
 
@@ -159,7 +157,7 @@ func readARP(handle *pcap.Handle, iface *net.Interface, vendor *VendorFinder, re
 			device := Device{
 				Ip:       net.IP(arp.SourceProtAddress).String(),
 				Mac:      hwAddress,
-				Vendor:   vendor.Find(hwAddress),
+				Vendor:   GetVendor(hwAddress, true),
 				LastSeen: time.Now().UTC(),
 				Status:   Up,
 			}
