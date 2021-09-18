@@ -89,10 +89,12 @@ func ArpScan(ctx context.Context, iface *net.Interface, interval time.Duration, 
 			log.Println("ArpScan: context canceled")
 			return nil
 		case <-time.After(interval):
-			// Write our scan packets out to the handle.
-			if err := writeARP(handle, iface, addr); err != nil {
-				log.Printf("error writing packets on %v: %v", iface.Name, err)
-			}
+			go func() {
+				// Write our scan packets out to the handle.
+				if err := writeARP(handle, iface, addr); err != nil {
+					log.Printf("error writing packets on %v: %v", iface.Name, err)
+				}
+			}()
 		}
 	}
 }

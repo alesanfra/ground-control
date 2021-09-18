@@ -1,0 +1,17 @@
+{
+  "ArpScan": {
+    "Interval": "30s",
+    "Lenience": "1m"
+  },
+  "SpeedTest": {
+    "Interval": "1h"
+  },
+  "Http": {
+    "Port": 3000
+  },
+  "Telegram": {
+    "Token": "",
+    "ChatId": 0,
+    "Timeout": "1m"
+  }
+}

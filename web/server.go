@@ -16,7 +16,7 @@ type Server struct {
 	port    uint
 }
 
-func NewWebServer(devices scanner.DeviceMap, port uint) *Server {
+func NewWebService(devices scanner.DeviceMap, port uint) *Server {
 	return &Server{devices: devices, port: port}
 }
 
